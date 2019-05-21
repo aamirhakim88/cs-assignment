@@ -206,6 +206,10 @@ Parameters:
     Description: Select the web security group.
     Type: AWS::EC2::SecurityGroup::Id
 
+Conditions:
+  NumberOfSubnets1:
+    !Equals [ 1, !Ref NumberOfSubnets ]
+
 Mappings:
   RegionMap:
     us-east-2:
