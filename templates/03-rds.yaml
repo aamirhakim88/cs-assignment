@@ -1,0 +1,131 @@
+---
+AWSTemplateFormatVersion: 2010-09-09
+
+Metadata:
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+    - Label:
+        default: Database Parameters
+      Parameters:
+        - DatabaseInstanceType
+        - DatabaseMasterUsername
+        - DatabaseMasterPassword
+        - DatabaseName
+        - DatabaseSecurityGroup
+        - NumberOfSubnets
+        - Subnet
+    ParameterLabels:
+      DatabaseInstanceType:
+        default: DB Instance Class
+      DatabaseMasterUsername:
+        default: DB Master Username
+      DatabaseMasterPassword:
+        default: DB Master Password
+      DatabaseName:
+        default: DB Name
+      DatabaseSecurityGroup:
+        default: DB Security Group
+      NumberOfSubnets:
+        default: Number of subnets
+      Subnet:
+        default: Subnets
+
+Parameters:
+  DatabaseInstanceType:
+    Default: db.t2.medium
+    Description: The Amazon RDS database instance class.
+    Type: String
+  DatabaseMasterUsername:
+    AllowedPattern: ^([a-zA-Z0-9]*)$
+    Description: The Amazon RDS master username.
+    ConstraintDescription: Must contain only alphanumeric characters (minimum 8; maximum 16).
+    MaxLength: 16
+    MinLength: 8
+    Type: String
+  DatabaseMasterPassword:
+    AllowedPattern: ^([a-z0-9A-Z`~!#$%^&*()_+,\\-])*$
+    ConstraintDescription: Must be letters (upper or lower), numbers, and these special characters '_'`~!#$%^&*()_+,-
+    Description: The Amazon RDS master password.
+    MaxLength: 41
+    MinLength: 8
+    NoEcho: true
+    Type: String
+  DatabaseName:
+    AllowedPattern: ^([a-zA-Z0-9]*)$
+    Description: The Amazon RDS master database name.
+    Type: String
+  DatabaseSecurityGroup:
+    Description: Select the database security group.
+    Type: AWS::EC2::SecurityGroup::Id
+  NumberOfSubnets:
+    AllowedValues:
+    - 1
+    - 2
+    Default: 2
+    Description: Number of subnets. This must match your selections in the list of subnets below.
+    Type: String
+  Subnet:
+    Description: Select existing subnets. The number selected must match the number of subnets above. Subnets selected must be in separate AZs.
+    Type: List<AWS::EC2::Subnet::Id>
+
+Conditions:
+  NumberOfSubnets1:
+      !Equals [ 1, !Ref NumberOfSubnets ]
+
+Resources:
+  DatabaseCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      BackupRetentionPeriod: 5
+      DatabaseName: !Ref DatabaseName
+      DBSubnetGroupName: !Ref DataSubnetGroup
+      Engine: aurora
+      MasterUsername: !Ref DatabaseMasterUsername
+      MasterUserPassword: !Ref DatabaseMasterPassword
+      Port: 3306
+      VpcSecurityGroupIds:
+      - !Ref DatabaseSecurityGroup
+  DatabaseInstance0:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      AllowMajorVersionUpgrade: false
+      AutoMinorVersionUpgrade: true
+      DBClusterIdentifier: !Ref DatabaseCluster
+      DBInstanceClass: !Ref DatabaseInstanceType
+      DBSubnetGroupName: !Ref DataSubnetGroup
+      Engine: aurora
+  DatabaseInstance1:
+    Type: AWS::RDS::DBInstance
+    DeletionPolicy: Delete
+    Properties:
+      AllowMajorVersionUpgrade: false
+      AutoMinorVersionUpgrade: true
+      DBClusterIdentifier: !Ref DatabaseCluster
+      DBInstanceClass: !Ref DatabaseInstanceType
+      DBSubnetGroupName: !Ref DataSubnetGroup
+      Engine: aurora
+  DataSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: RDS Database Subnet Group for WordPress
+      SubnetIds:
+        !If
+          [ NumberOfSubnets1,
+          [ !Select [ 0, !Ref Subnet ] ],
+          [ !Select [ 0, !Ref Subnet ], !Select [ 1, !Ref Subnet ] ]
+          ]
+
+Outputs:
+  DatabaseCluster:
+    Value: !Ref DatabaseCluster
+  DatabaseName:
+    Value: !Ref DatabaseName
+  DatabaseInstance0:
+    Value: !Ref DatabaseInstance0
+  DatabaseInstance1:
+    Value: !Ref DatabaseInstance1
+  DataSubnetGroup:
+    Value: !Ref DataSubnetGroup
+  DatabaseClusterEndpointAddress:
+    Value: !GetAtt DatabaseCluster.Endpoint.Address
