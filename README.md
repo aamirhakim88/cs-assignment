@@ -1,4 +1,4 @@
-![Architecture Diagram](/Users/aamirji/Code-Snipps/CS-Assignment-Templates/CS-Assignment-Arch-Diagram.png)
+![Architecture Diagram](CS-Assignment-Arch-Diagram.png)
 
 
 
